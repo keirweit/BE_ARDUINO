@@ -19,7 +19,9 @@ void affichage(int distance);
 void setup() { 
   Serial.begin(9600);         // Démarre le port série
   delay(100);
-  lcd.begin(16, 2); 
+  lcd.begin(16, 2);
+  lcd.setCursor(0, 0);
+  lcd.print("Distance:");
   EIMSK |=  (1 << INT0); // Active l'interruption sur INT0 (DPIN_2)
   EICRA &= ~(1<<ISC01); //  sur tous les fronts
   EICRA |= (1<<ISC00); //   (montant et descendant))
@@ -37,11 +39,25 @@ void loop() {
 
 
 void affichage(int distance) {
-  lcd.clear(); // effacage de l'écran
-  if(mesure_prete == 1){ // Si la mesure est prete
-    lcd.print(distance);} // on affiche la distance
+  static int HDP = 0;
+  if(mesure_prete == 1){    // Si la mesure est prete
+    if(HDP == 1){           // On réafiche "Distance" uniquement s'il à été éffacé
+      lcd.setCursor(0, 0);  
+      lcd.print("Distance:");
+    }
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%-4d", distance);
+    lcd.setCursor(10,0);
+    lcd.print(buf);         // On place le curseur après "distance"  // on affiche la distance 
+    lcd.setCursor(13,0);
+    lcd.print(" cm");
+  
+  } 
   else {
-    lcd.print("Hors de portee");} // sinon c'est que la mesure n'a pas abouti
+    lcd.setCursor(0,0);
+    lcd.print("Hors de portee  "); // sinon c'est que la mesure n'a pas abouti
+    HDP = 1;
+  }
 }
 void trigger_mesure() {
     cli(); // pas d'interrpution
@@ -58,6 +74,7 @@ void trigger_mesure() {
 }
 
 ISR(INT0_vect){           // fonction déclenchée en cas d'interruption
+
   unsigned long maintenant = micros();
 
   if (PIND & (1 << PIN_SIG)) {  // si c'est un front montant : début de mesure
@@ -72,3 +89,4 @@ ISR(INT0_vect){           // fonction déclenchée en cas d'interruption
     else {duree = 0;}     // si l'overtime est dépassé on conscidère que la mesure est fausse
   }
 }
+
